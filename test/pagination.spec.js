@@ -18,6 +18,32 @@ const gql = require('graphql-tag');
 describe('Pagination', () => {
 
   before(() => Promise.fromCallback(cb => cpx.copy('./data.json', './data/', cb)));
+  let accessToken;
+  before(() => {
+    accessToken = 'ZDRBGfgwCVrtgxHERTiSH6B9jrZ30Uv1Dq3dzeRNxaFEmrVimQTPZ3fsHFEsLdv5';
+    // login
+    const query = gql `
+      mutation login {
+        Account {
+          AccountLogin(input:{
+            credentials: {
+              username: "amnaj", 
+              password: "123"
+            }
+          }) {
+            obj
+          }
+        }
+      }`;
+    return chai.request(server)
+    .post('/graphql')
+    .send({
+      query
+    })
+    .then((res) => {
+      accessToken = res.body.data.Account.AccountLogin.obj.id;
+    });
+  });
 
   it('should query first 2 entities', () => {
     const query = gql `{
@@ -42,7 +68,7 @@ describe('Pagination', () => {
     }`;
     return chai.request(server)
             .post('/graphql')
-            .set('Authorization', '6NJWVfqaWHjgcv3mmuWarSVuUic8WzFSutftH0mADLCZaZeuLlSJYbaHAVC6D3gw')
+            .set('Authorization', accessToken)
             .send({
               query
             })
@@ -77,7 +103,7 @@ describe('Pagination', () => {
     }`;
     return chai.request(server)
             .post('/graphql')
-            .set('Authorization', '6NJWVfqaWHjgcv3mmuWarSVuUic8WzFSutftH0mADLCZaZeuLlSJYbaHAVC6D3gw')
+            .set('Authorization', accessToken)
             .send({
               query
             })
@@ -121,7 +147,7 @@ describe('Pagination', () => {
 		}`;
     return chai.request(server)
             .post('/graphql')
-            .set('Authorization', '6NJWVfqaWHjgcv3mmuWarSVuUic8WzFSutftH0mADLCZaZeuLlSJYbaHAVC6D3gw')
+            .set('Authorization', accessToken)
             .send({
               query
             })

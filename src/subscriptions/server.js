@@ -1,4 +1,7 @@
-const { createServer } = require('http');
+const http = require('http');
+const https = require('https');
+const fs = require('fs');
+
 const { SubscriptionServer } = require('subscriptions-transport-ws');
 
 
@@ -16,40 +19,36 @@ module.exports = function(app, subscriptionManager, opts) {
   const options = subscriptionOpts.options || {};
   const socketOptions = subscriptionOpts.socketOptions || {};
 
-  const websocketServer = createServer((request, response) => {
-    response.writeHead(404);
-    response.end();
-  });
+  let websocketServer;
+  if (subscriptionOpts.ssl) {
+    const ssl = {
+      key: fs.readFileSync(subscriptionOpts.keyPath),
+      cert: fs.readFileSync(subscriptionOpts.certPath)
+    };
+    websocketServer = https.createServer(ssl, (request, response) => {
+      response.writeHead(404);
+      response.end();
+    });
+  } else {
+    websocketServer = http.createServer((request, response) => {
+      response.writeHead(404);
+      response.end();
+    });
+  }
 
   websocketServer.listen(WS_PORT, () => console.log(
-    `Websocket Server is now running on http://localhost:${WS_PORT}`
+    `Websocket Server is now running on http(s)://localhost:${WS_PORT}`
   ));
 
   const server = new SubscriptionServer(
-      Object.assign({}, {
-        // onConnect: ({ accessToken }) => {
-        //   return new Promise((resolve, reject) => {
-        //     app.loopback.AccessToken.findById(accessToken, (err, token) => {
-        //       if (err) {
-        //         reject(err);
-        //       }
-
-        //       if (!token) {
-        //         reject(new Error('Access denied!'));
-        //       }
-
-        //       return resolve({ accessToken: token });
-        //     });
-        //   });
-
-        // },
-        subscriptionManager
-      }, options),
-      Object.assign({}, {
-        server: websocketServer,
-        path: '/'
-      }, socketOptions)
-    );
+    Object.assign({}, {
+      subscriptionManager
+    }, options),
+    Object.assign({}, {
+      server: websocketServer,
+      path: '/'
+    }, socketOptions)
+  );
 
   return server;
 };

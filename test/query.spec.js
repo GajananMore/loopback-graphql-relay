@@ -13,6 +13,33 @@ describe('Queries', () => {
   before(() => Promise.fromCallback(cb => cpx.copy('./data.json', './data/', cb)));
 
   describe('Single entity', () => {
+    let accessToken;
+    before(() => {
+      accessToken = 'ZDRBGfgwCVrtgxHERTiSH6B9jrZ30Uv1Dq3dzeRNxaFEmrVimQTPZ3fsHFEsLdv5';
+      // login
+      const query = gql `
+      mutation login {
+        Account {
+          AccountLogin(input:{
+            credentials: {
+              username: "amnaj", 
+              password: "123"
+            }
+          }) {
+            obj
+          }
+        }
+      }`;
+      return chai.request(server)
+      .post('/graphql')
+      .send({
+        query
+      })
+      .then((res) => {
+        accessToken = res.body.data.Account.AccountLogin.obj.id;
+      });
+    });
+
     it('should execute a single query with relation', () => {
       const query = gql `
             query {
@@ -30,23 +57,22 @@ describe('Queries', () => {
               }
             }`;
       return chai.request(server)
-                .post('/graphql')
-                .set('Authorization', '6NJWVfqaWHjgcv3mmuWarSVuUic8WzFSutftH0mADLCZaZeuLlSJYbaHAVC6D3gw')
-                .send({
-                  query
-                })
-                .then((res) => {
-                  expect(res).to.have.status(200);
-                  const result = res.body.data;
-                  expect(result.viewer.sites.edges.length).to.equal(1);
-                  expect(result.viewer.sites.edges[0].node.name).to.equal('blueeast');
-                  expect(result.viewer.sites.edges[0].node.owner.username).to.equal('artalat');
-                });
+      .post('/graphql')
+      .set('Authorization', accessToken)
+      .send({
+        query
+      })
+      .then((res) => {
+        expect(res).to.have.status(200);
+        const result = res.body.data;
+        expect(result.viewer.sites.edges.length).to.equal(1);
+        expect(result.viewer.sites.edges[0].node.name).to.equal('sample site');
+        expect(result.viewer.sites.edges[0].node.owner.username).to.equal('amnaj');
+      });
     });
-  });
 
-  it('should have a total count of 3', () => {
-    const query = gql `
+    it('should have a total count of 3', () => {
+      const query = gql `
       {
         viewer {
           sites {
@@ -54,66 +80,67 @@ describe('Queries', () => {
           }
         }
       }`;
-    return chai.request(server)
-            .post('/graphql')
-            .set('Authorization', '6NJWVfqaWHjgcv3mmuWarSVuUic8WzFSutftH0mADLCZaZeuLlSJYbaHAVC6D3gw')
-            .send({
-              query
-            })
-            .then((res) => {
-              expect(res).to.have.status(200);
-              expect(res.body.data.viewer.sites.totalCount).to.equal(3);
-            });
-  });
+      return chai.request(server)
+      .post('/graphql')
+      .set('Authorization', accessToken)
+      .send({
+        query
+      })
+      .then((res) => {
+        expect(res).to.have.status(200);
+        expect(res.body.data.viewer.sites.totalCount).to.equal(3);
+      });
+    });
 
-
-  it('should sort books by name in descending order', () => {
-    const query = gql `
-      {
-        viewer {
-          sites (order: "name DESC") {
-            totalCount
-            edges {
-              node {
-                id
-                name
+    it('should sort sites by name in descending order', () => {
+      const query = gql `
+        {
+          viewer {
+            sites (order: "name DESC") {
+              totalCount
+              edges {
+                node {
+                  id
+                  name
+                }
               }
             }
           }
-        }
-      }`;
-    return chai.request(server)
-            .post('/graphql')
-            .set('Authorization', '6NJWVfqaWHjgcv3mmuWarSVuUic8WzFSutftH0mADLCZaZeuLlSJYbaHAVC6D3gw')
-            .send({
-              query
-            })
-            .then((res) => {
-              expect(res).to.have.status(200);
-              expect(res.body.data.viewer.sites.totalCount).to.equal(3);
-              expect(res.body.data.viewer.sites.edges[0].node.name).to.equal('xyz');
-            });
+        }`;
+      return chai.request(server)
+      .post('/graphql')
+      .set('Authorization', accessToken)
+      .send({
+        query
+      })
+      .then((res) => {
+        expect(res).to.have.status(200);
+        expect(res.body.data.viewer.sites.totalCount).to.equal(3);
+        expect(res.body.data.viewer.sites.edges[0].node.name).to.equal('xyz');
+      });
+    });
+
+    it('should return current logged in user', () => {
+      const query = gql `
+        {
+          viewer {
+            me { id username email }
+          }
+        }`;
+      return chai.request(server)
+      .post('/graphql')
+      .set('Authorization', accessToken)
+      .send({
+        query
+      })
+      .then((res) => {
+        expect(res).to.have.status(200);
+        expect(res.body.data.viewer.me.username).to.equal('amnaj');
+        expect(res.body.data.viewer.me.email).to.equal('amna.junaid@blueeast.com');
+      });
+    });
   });
 
-  it('should return current logged in user', () => {
-    const query = gql `
-      {
-        viewer {
-          me { id username email }
-        }
-      }`;
-    return chai.request(server)
-            .post('/graphql')
-            .set('Authorization', '6NJWVfqaWHjgcv3mmuWarSVuUic8WzFSutftH0mADLCZaZeuLlSJYbaHAVC6D3gw')
-            .send({
-              query
-            })
-            .then((res) => {
-              expect(res).to.have.status(200);
-              expect(res.body.data.viewer.me.username).to.equal('artalat');
-              expect(res.body.data.viewer.me.email).to.equal('me@artalat.com');
-            });
-  });
 
   describe('Remote hooks', () => {
 
@@ -135,12 +162,11 @@ describe('Queries', () => {
               });
     });
 
-
     it('exists', () => {
       const query = gql `
         {
           Author {
-            exists: AuthorExists(id: 3) 
+            exists: AuthorExists(id: 3)
           }
         }`;
       return chai.request(server)
@@ -163,7 +189,7 @@ describe('Queries', () => {
               id
               first_name
               last_name
-            } 
+            }
           }
         }`;
       return chai.request(server)
@@ -187,7 +213,7 @@ describe('Queries', () => {
               id
               first_name
               last_name
-            } 
+            }
           }
         }`;
       return chai.request(server)
@@ -268,7 +294,6 @@ describe('Queries', () => {
                 expect(res).to.have.deep.property('body.data.Customer.CustomerFindById.orders.edges[0].node.description');
               });
     });
-
 
   });
 });

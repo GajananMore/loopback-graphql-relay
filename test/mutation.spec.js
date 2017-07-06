@@ -145,5 +145,4 @@ describe('Mutations', () => {
               expect(res).to.have.deep.property('body.data.User.UserLogin.obj.id');
             });
   });
-
 });
