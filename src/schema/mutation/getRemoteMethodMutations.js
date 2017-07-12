@@ -10,7 +10,7 @@ const promisify = require('promisify-node');
 const { connectionFromPromisedArray } = require('graphql-relay');
 
 const utils = require('../utils');
-const checkAccess = require("../ACLs");
+const checkAccess = require('../ACLs');
 // const { getType } = require('../../types/type');
 
 const allowedVerbs = ['post', 'del', 'put', 'patch', 'all'];
@@ -46,27 +46,26 @@ module.exports = function getRemoteMethodMutations(model) {
               resolve: o => o
             },
           },
-            mutateAndGetPayload: (args,context) => {
-            const params = [];
+          mutateAndGetPayload: (args, context) => {
+              const params = [];
 
-            _.forEach(acceptingParams, (param, name) => {
-              params.push(args[name]);
-            });
-              var modelId = args && args.id;
-           return checkAccess({accessToken:context.req.accessToken ,model: model, method: method,id:modelId})
-           .then(() =>
-            {
-                const wrap = promisify(model[method.name]);
+              _.forEach(acceptingParams, (param, name) => {
+                params.push(args[name]);
+              });
+              let modelId = args && args.id;
+              return checkAccess({ accessToken:context.req.accessToken, model: model, method: method, id:modelId })
+              .then(() => { 
+             const wrap = promisify(model[method.name]);
 
-                if (typeObj.list) {
-                  return connectionFromPromisedArray(wrap.apply(model, params), args, model);
-                }
+             if (typeObj.list) {
+               return connectionFromPromisedArray(wrap.apply(model, params), args, model);
+             }
 
-                return wrap.apply(model, params);
-            })
-            .catch((err)=>{
-                 throw  err;
-            }); 
+               return wrap.apply(model, params);
+           })
+           .catch((err) => {
+              throw  err;
+           }); 
           }
         });
       }
