@@ -12,6 +12,9 @@ let _=require('lodash');
 
   function getAccessToken(req,model){
     try{
+    if(req.accessToken){
+        return Promise.resolve(req.accessToken);
+    }     
     let token = getTokenFromReq(req);
      return model.app.models.AccessToken.findById(token);
     }
